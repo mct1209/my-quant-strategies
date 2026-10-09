@@ -1,13 +1,10 @@
 name: Run Quant Multi-Strategies
 
 on:
-  schedule:
-    - cron: '30 6 * * 1-5'
-
   workflow_dispatch:
     inputs:
       target_strategy:
-        description: '請選擇要執行的策略'
+        description: 'Select strategy to run'
         required: true
         default: 'ALL'
         type: choice
@@ -19,46 +16,41 @@ on:
           - v5_73_ETF
           - v5_6
       filter_mode:
-        description: '訊號過濾模式 (ALL: 全部 / BUY: 僅買進 / WATCH: 僅觀察 / AVOID: 僅觀望 / SELL: 僅賣出)'
-        required: true
+        description: 'Filter Mode'
+        required: false
         default: 'ALL'
         type: choice
         options:
           - ALL
-          - BUY
-          - WATCH
-          - AVOID
-          - SELL
-
-permissions:
-  contents: write
+          - SHORTLIST
 
 jobs:
   run-quant-pipeline:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Check out repository
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy requests yfinance tabulate lxml html5lib
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Execute Strategy Engine
         env:
-          FILTER_MODE: ${{ github.event.inputs.filter_mode || 'ALL' }}
+          FILTER_MODE: ${{ github.event.inputs.filter_mode }}
         run: |
-          python main.py ${{ github.event.inputs.target_strategy || 'ALL' }}
+          python main.py ${{ github.event.inputs.target_strategy }}
 
-      - name: Commit & Push Results to GitHub
-        uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Commit and push results
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Auto update quant strategy results [skip ci]"
-          file_pattern: 'results/* README.md'
+          commit_message: "Auto update quant results and README [skip ci]"
+          file_pattern: "results/* README.md"
