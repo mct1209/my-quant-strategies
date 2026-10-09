@@ -1,12 +1,9 @@
-
 name: Run Quant Multi-Strategies
 
 on:
-  # 排程觸發：週一至週五 UTC 06:30 (台灣時間 14:30)
   schedule:
     - cron: '30 6 * * 1-5'
 
-  # 手動觸發（支援在手機上選擇跑哪個策略）
   workflow_dispatch:
     inputs:
       target_strategy:
@@ -22,7 +19,7 @@ on:
           - v5_73_ETF
           - v5_6
 
-filter_mode:
+      filter_mode:
         description: '訊號過濾模式 (ALL: 全部 / BUY: 僅買進 / WATCH: 僅觀察 / AVOID: 僅觀望 / SELL: 僅賣出)'
         required: true
         default: 'ALL'
@@ -56,6 +53,8 @@ jobs:
           pip install pandas numpy requests yfinance tabulate lxml html5lib
 
       - name: Execute Strategy Engine
+        env:
+          FILTER_MODE: ${{ github.event.inputs.filter_mode || 'ALL' }}
         run: |
           python main.py ${{ github.event.inputs.target_strategy || 'ALL' }}
 
@@ -64,4 +63,3 @@ jobs:
         with:
           commit_message: "Auto update quant strategy results [skip ci]"
           file_pattern: 'results/* README.md'
-
