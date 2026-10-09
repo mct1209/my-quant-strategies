@@ -18,7 +18,6 @@ on:
           - v6_0
           - v5_73_ETF
           - v5_6
-
       filter_mode:
         description: '訊號過濾模式 (ALL: 全部 / BUY: 僅買進 / WATCH: 僅觀察 / AVOID: 僅觀望 / SELL: 僅賣出)'
         required: true
