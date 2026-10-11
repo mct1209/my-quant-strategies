@@ -24,22 +24,21 @@ def get_strategy_configs():
     return configs
 
 def clean_old_results():
-    """自動清除 results/ 資料夾中舊的歷史 CSV 檔案，只保留最新產出"""
+    """自動清除 results/ 資料夾中所有舊的 CSV 檔案，僅保留帶有 latest 的最新結果"""
     results_dir = "results"
     if not os.path.exists(results_dir):
         return
 
-    print("🧹 正在清理舊的歷史結果 CSV 檔案...")
-    # 找出所有歷史帶日期的 csv (例如含有 _2026... 的檔案) 或非 latest 的暫存檔
+    print("🧹 [自動清理] 正在檢查並刪除 results/ 中的舊 CSV 檔案...")
     csv_files = glob.glob(os.path.join(results_dir, "*.csv"))
     
     for file_path in csv_files:
         filename = os.path.basename(file_path)
-        # 保留含有 latest 的檔案，或者刪除包含舊日期格式的歷史檔案
+        # 只要檔名中不包含 'latest'，一律刪除，確保 GitHub 上永遠只有最新檔案
         if "latest" not in filename.lower():
             try:
                 os.remove(file_path)
-                print(f"🗑️ 已刪除舊結果檔案: {filename}")
+                print(f"🗑️ 已刪除舊結果: {filename}")
             except Exception as e:
                 print(f"⚠️ 無法刪除 {filename}: {e}")
 
@@ -153,7 +152,7 @@ def update_readme_summary():
         update_readme_summary()
 
 def main():
-    # 1. 執行前先清理舊的非 latest 歷史結果檔案
+    # 每次執行前（包含 GitHub Actions 自動執行），先自動清理舊的非 latest 歷史結果檔
     clean_old_results()
 
     strategy_config = get_strategy_configs()
