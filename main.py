@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+import glob
 import pandas as pd
 from datetime import datetime
 
@@ -21,6 +22,26 @@ def get_strategy_configs():
                 'name': f"策略 {key}"
             }
     return configs
+
+def clean_old_results():
+    """自動清除 results/ 資料夾中舊的歷史 CSV 檔案，只保留最新產出"""
+    results_dir = "results"
+    if not os.path.exists(results_dir):
+        return
+
+    print("🧹 正在清理舊的歷史結果 CSV 檔案...")
+    # 找出所有歷史帶日期的 csv (例如含有 _2026... 的檔案) 或非 latest 的暫存檔
+    csv_files = glob.glob(os.path.join(results_dir, "*.csv"))
+    
+    for file_path in csv_files:
+        filename = os.path.basename(file_path)
+        # 保留含有 latest 的檔案，或者刪除包含舊日期格式的歷史檔案
+        if "latest" not in filename.lower():
+            try:
+                os.remove(file_path)
+                print(f"🗑️ 已刪除舊結果檔案: {filename}")
+            except Exception as e:
+                print(f"⚠️ 無法刪除 {filename}: {e}")
 
 def run_script(script_path):
     if not os.path.exists(script_path):
@@ -86,26 +107,20 @@ def update_readme_summary():
                 if df.empty:
                     markdown_content += "_今日無符合篩選條件之標的_\n\n"
                 else:
-                    # 尋找可能代表訊號的欄位
                     signal_cols = [c for c in df.columns if any(k in c.lower() for k in ['buy', 'watch', 'sell', 'action', 'signal', 'status'])]
                     
-                    # 如果有訊號欄位，嘗試過濾掉空值或純粹無訊號的列（保留包含 buy/watch/sell 或非空的訊號）
                     filtered_df = df.copy()
                     if signal_cols:
-                        # 挑選第一個主要的訊號欄位進行過濾展示，或者保留有訊號動作的列
                         s_col = signal_cols[0]
-                        # 僅保留有意義的訊號（非 NaN、非空字串、非 0 / False / None）
                         filtered_df = filtered_df[filtered_df[s_col].notna() & (filtered_df[s_col].astype(str).str.strip() != '')]
-                        # 如果過濾後有資料，優先顯示；若過濾後空了，則退回顯示前幾筆或提示
                         if filtered_df.empty:
-                            filtered_df = df.head(5) # 若無特定 buy/watch 字眼但有產出，顯示前5筆
+                            filtered_df = df.head(5)
                     else:
                         filtered_df = df.head(10)
 
                     if filtered_df.empty:
                         markdown_content += "_今日無 Buy / Watch / Sell 訊號標的_\n\n"
                     else:
-                        # 調整欄位順序：將 Buy, Watch, Action, 股票代號等優先排在前面
                         all_cols = list(filtered_df.columns)
                         priority_cols = [c for c in all_cols if any(k in c.lower() for k in ['buy', 'watch', 'sell', 'action', 'signal', '代號', '股票', 'symbol', 'name', 'status'])]
                         other_cols = [c for c in all_cols if c not in priority_cols and not c.startswith('Unnamed')]
@@ -138,6 +153,9 @@ def update_readme_summary():
         update_readme_summary()
 
 def main():
+    # 1. 執行前先清理舊的非 latest 歷史結果檔案
+    clean_old_results()
+
     strategy_config = get_strategy_configs()
     target = sys.argv[1] if len(sys.argv) > 1 else 'ALL'
     print(f"🎯 執行目標策略: {target}")
